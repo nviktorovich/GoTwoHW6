@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"runtime/trace"
 	"sync"
 )
+//Написать многопоточную программу, в которой будет использоваться явный вызов
+//планировщика. Выполните трассировку программы
 
 const path = "temp.txt"
 var wg = sync.WaitGroup{}
 var mx = sync.Mutex{}
-//var wg2 = sync.WaitGroup{}
 
 func makeFile(p string) (*os.File, error) {
 	file, err := os.Create(p)
@@ -23,11 +25,8 @@ func makeFile(p string) (*os.File, error) {
 }
 
 func writeManyStrings(f *os.File)  {
-	//defer f.Close()
 	defer wg.Done()
 	for i:=0; i<10000; i++{
-		fmt.Println("here1")
-		//runtime.Gosched()
 		mx.Lock()
 		f.WriteString("hello\n")
 		mx.Unlock()
@@ -35,10 +34,8 @@ func writeManyStrings(f *os.File)  {
 }
 
 func writeSymbolString(f *os.File) {
-	//defer f.Close()
 	defer wg.Done()
 	for i:=0; i<10; i++{
-		fmt.Println("here2")
 		runtime.Gosched()
 		mx.Lock()
 		_, err := f.WriteString("!@!@$#@#!@#!@$!#!@#!@#!@#!@!@#@!@#\n")
@@ -50,6 +47,9 @@ func writeSymbolString(f *os.File) {
 }
 
 func main()  {
+	trace.Start(os.Stderr)
+	defer trace.Stop()
+
 	f, err := makeFile(path)
 	defer f.Close()
 	if err != nil {
@@ -58,8 +58,6 @@ func main()  {
 	}
 	wg.Add(2)
 	go writeManyStrings(f)
-	//wg1.Wait()
-	//wg2.Add(1)
 	go writeSymbolString(f)
 	wg.Wait()
 fmt.Println("done")
